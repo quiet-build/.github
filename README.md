@@ -21,8 +21,14 @@ on:
 
 jobs:
   deploy:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     uses: quiet-build/.github/.github/workflows/deploy-static-site.yml@main
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 ```
 
 **Caller with PWA gate + bundle check** (e.g. `flappy-3d`):
@@ -36,14 +42,20 @@ on:
 
 jobs:
   deploy:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     uses: quiet-build/.github/.github/workflows/deploy-static-site.yml@main
     with:
       bundle-check-command: bash scripts/bundle-check.sh
-      lighthouse-pwa-gate: 0.9
-    secrets: inherit
+      lighthouse-pwa-gate: "0.9"
+    secrets:
+      CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 ```
 
-#### Inputs (all optional)
+#### Inputs (all optional, all strings)
 
 | Input | Default | Description |
 |---|---|---|
@@ -55,20 +67,37 @@ jobs:
 | `cloudflare-project-name` | `<repo>` | Cloudflare Pages project name |
 | `cloudflare-branch` | `main` | Cloudflare Pages branch |
 | `bundle-check-command` | _(empty)_ | Bundle-size check command — empty skips |
-| `lighthouse-pwa-gate` | `0` | Minimum Lighthouse PWA score — `0` skips the audit |
+| `lighthouse-pwa-gate` | _(empty)_ | Minimum Lighthouse PWA score, e.g. `"0.9"` — empty skips the audit |
 
 #### Required secrets
 
-Both must exist as **org-level** secrets on `quiet-build`:
+Both must exist as **org-level** secrets on `quiet-build` (or per-repo
+with the same names):
 
 - `CLOUDFLARE_API_TOKEN` — Cloudflare API token with `Pages:Edit`
 - `CLOUDFLARE_ACCOUNT_ID` — Cloudflare account ID
 
-Callers pass them through with `secrets: inherit`.
+#### Required permissions
+
+The caller's `uses:` job must grant:
+
+```yaml
+permissions:
+  contents: read   # checkout
+  pages: write     # GitHub Pages deploy
+  id-token: write  # OIDC token for actions/deploy-pages
+```
+
+`permissions` cannot live at the workflow top-level of `workflow_call`
+workflows (GitHub rejects with `startup_failure`) — that's why they're at
+the job level here and at the caller's `uses:` job.
 
 ## Notes
 
 - The workflow builds **twice** — once with `VITE_BASE=/<repo>/` for GitHub
-  Pages, once with `VITE_BASE=/` for Cloudflare Pages (because asset paths
-  differ between the two hosts).
-- Cloudflare Pages projects are auto-created on first deploy by `wrangler`.
+  Pages, once with `VITE_BASE=/` for Cloudflare Pages (asset paths differ
+  between the two hosts).
+- Cloudflare Pages projects are auto-created by `wrangler` on first deploy.
+- `NPM_CONFIG_LEGACY_PEER_DEPS=true` is set on the Cloudflare job so that
+  `wrangler-action`'s implicit `npm i wrangler` respects the workspace's
+  peer-dep workaround.
