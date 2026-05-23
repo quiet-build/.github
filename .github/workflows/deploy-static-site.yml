@@ -57,10 +57,10 @@ on:
         type: string
         default: ''
       lighthouse-pwa-gate:
-        description: 'Minimum Lighthouse PWA score (0 = skip the audit)'
+        description: 'Minimum Lighthouse PWA score, e.g. "0.9" (empty = skip the audit)'
         required: false
-        type: number
-        default: 0
+        type: string
+        default: ''
     secrets:
       CLOUDFLARE_API_TOKEN:
         required: true
@@ -117,7 +117,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
   lighthouse:
-    if: ${{ inputs.lighthouse-pwa-gate != 0 }}
+    if: ${{ inputs.lighthouse-pwa-gate != '' }}
     needs: deploy
     runs-on: ubuntu-latest
     steps:
