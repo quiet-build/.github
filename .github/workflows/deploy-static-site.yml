@@ -63,9 +63,9 @@ on:
         default: ''
     secrets:
       CLOUDFLARE_API_TOKEN:
-        required: true
+        required: false
       CLOUDFLARE_ACCOUNT_ID:
-        required: true
+        required: false
 
 permissions:
   contents: read
