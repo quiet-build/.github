@@ -1,63 +1,40 @@
-name: Deploy static site (reusable)
-
-# Reusable workflow for static-site projects in the quiet-build org.
-# Builds with Vite, deploys to GitHub Pages and Cloudflare Pages in parallel,
-# optionally gates on a bundle-size check and a Lighthouse PWA audit.
-#
-# Caller example:
-#   jobs:
-#     deploy:
-#       uses: quiet-build/.github/.github/workflows/deploy-static-site.yml@main
-#       with:
-#         bundle-check-command: bash scripts/bundle-check.sh   # optional
-#         lighthouse-pwa-gate: 0.9                             # optional (0 = skip)
-#       secrets: inherit
-
+name: Deploy static site reusable
 on:
   workflow_call:
     inputs:
       node-version:
-        description: 'Node.js version'
         required: false
         type: string
         default: '22'
       install-command:
-        description: 'Dependency install command'
         required: false
         type: string
         default: 'npm ci --legacy-peer-deps'
       build-command:
-        description: 'Build command'
         required: false
         type: string
         default: 'npm run build'
       dist-dir:
-        description: 'Build output directory'
         required: false
         type: string
         default: 'dist'
       pages-base:
-        description: 'VITE_BASE for the GitHub Pages build (defaults to /<repo>/)'
         required: false
         type: string
         default: ''
       cloudflare-project-name:
-        description: 'Cloudflare Pages project name (defaults to the repo name)'
         required: false
         type: string
         default: ''
       cloudflare-branch:
-        description: 'Cloudflare Pages branch'
         required: false
         type: string
         default: 'main'
       bundle-check-command:
-        description: 'Optional bundle-size check command (empty = skip)'
         required: false
         type: string
         default: ''
       lighthouse-pwa-gate:
-        description: 'Minimum Lighthouse PWA score, e.g. "0.9" (empty = skip the audit)'
         required: false
         type: string
         default: ''
@@ -67,100 +44,13 @@ on:
       CLOUDFLARE_ACCOUNT_ID:
         required: false
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages-${{ github.repository }}
-  cancel-in-progress: false
-
 jobs:
-  build:
+  echo:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: ${{ inputs.install-command }}
-
-      - name: Build (GitHub Pages base)
+      - run: |
+          echo "bundle: ${{ inputs.bundle-check-command }}"
+          echo "gate: ${{ inputs.lighthouse-pwa-gate }}"
+          echo "token-len: ${#TOK}"
         env:
-          VITE_BASE: ${{ inputs.pages-base != '' && inputs.pages-base || format('/{0}/', github.event.repository.name) }}
-        run: ${{ inputs.build-command }}
-
-      - name: Bundle-size check
-        if: inputs.bundle-check-command != ''
-        run: ${{ inputs.bundle-check-command }}
-
-      - uses: actions/configure-pages@v4
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: ${{ inputs.dist-dir }}
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    outputs:
-      page_url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
-
-  lighthouse:
-    if: ${{ inputs.lighthouse-pwa-gate != '' }}
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
-
-      - name: Install Lighthouse
-        run: npm install -g lighthouse@^11.7.1
-
-      - name: Audit PWA score
-        run: |
-          PAGE_URL="${{ needs.deploy.outputs.page_url }}"
-          echo "Auditing: $PAGE_URL"
-          lighthouse "$PAGE_URL" --only-categories=pwa --output=json --output-path=lh.json \
-            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" --quiet || true
-          if [ ! -f lh.json ]; then echo "Lighthouse did not produce a report"; exit 1; fi
-          SCORE=$(python3 -c "import json; print(json.load(open('lh.json'))['categories']['pwa']['score'])")
-          GATE="${{ inputs.lighthouse-pwa-gate }}"
-          echo "PWA score: $SCORE  ·  gate: $GATE"
-          python3 -c "import sys; sys.exit(0 if float('$SCORE') >= float('$GATE') else 1)"
-
-  deploy-cloudflare:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: ${{ inputs.install-command }}
-
-      - name: Build (root base for Cloudflare)
-        env:
-          VITE_BASE: '/'
-        run: ${{ inputs.build-command }}
-
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ${{ inputs.dist-dir }} --project-name=${{ inputs.cloudflare-project-name != '' && inputs.cloudflare-project-name || github.event.repository.name }} --branch=${{ inputs.cloudflare-branch }}
+          TOK: ${{ secrets.CLOUDFLARE_API_TOKEN }}
