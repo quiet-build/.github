@@ -154,6 +154,11 @@ jobs:
 
   deploy-cloudflare:
     runs-on: ubuntu-latest
+    env:
+      # wrangler-action runs `npm i wrangler` inside the project, which trips
+      # the same peer-dep conflict the project install handles with --legacy.
+      # This makes the implicit install respect it too.
+      NPM_CONFIG_LEGACY_PEER_DEPS: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
