@@ -67,6 +67,7 @@ jobs:
           test "$(git -C .arcade-support rev-parse HEAD)" = "$SUPPORT_SHA"
           python3 .arcade-support/scripts/retain_arcade_assets.py check-pin .github/workflows/deploy.yml "$SUPPORT_SHA"
           mv .arcade-support "$RUNNER_TEMP/arcade-support"
+          ruby "$RUNNER_TEMP/arcade-support/scripts/check_arcade_callers.rb" "$RUNNER_TEMP/arcade-support/.github/workflows/deploy-arcade-component.yml" "$SUPPORT_SHA" .github/workflows/deploy.yml
           python3 "$RUNNER_TEMP/arcade-support/scripts/test_retain_arcade_assets.py"
       - uses: actions/setup-node@v6
         with:
@@ -146,10 +147,7 @@ jobs:
     if: inputs.pages-base != ''
     needs: cloudflare
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
+    # Inherit the caller: only opted-in Pages callers grant Pages/OIDC scopes.
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
