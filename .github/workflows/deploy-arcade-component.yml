@@ -69,6 +69,7 @@ jobs:
           mv .arcade-support "$RUNNER_TEMP/arcade-support"
           ruby "$RUNNER_TEMP/arcade-support/scripts/check_arcade_callers.rb" "$RUNNER_TEMP/arcade-support/.github/workflows/deploy-arcade-component.yml" "$SUPPORT_SHA" .github/workflows/deploy.yml
           python3 "$RUNNER_TEMP/arcade-support/scripts/test_retain_arcade_assets.py"
+          python3 "$RUNNER_TEMP/arcade-support/scripts/test_write_build_identity.py"
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -86,6 +87,10 @@ jobs:
         run: pnpm build
         env:
           VITE_BASE: /
+      - name: Write build identity
+        env:
+          BUILD_ID: ${{ inputs.cloudflare-project-name }}
+        run: node "$RUNNER_TEMP/arcade-support/scripts/write_build_identity.js" dist
       - name: Required component and standalone gates
         run: ${{ inputs.postbuild-command }}
         env:
@@ -169,6 +174,16 @@ jobs:
         env:
           VITE_BASE: ${{ inputs.pages-base }}
         run: pnpm build
+      - uses: actions/checkout@v6
+        with:
+          repository: quiet-build/.github
+          ref: ${{ inputs.support-sha }}
+          path: .arcade-support
+          persist-credentials: false
+      - name: Write build identity
+        env:
+          BUILD_ID: ${{ inputs.cloudflare-project-name }}
+        run: node .arcade-support/scripts/write_build_identity.js dist
       - name: Existing bundle budget
         if: inputs.bundle-check-command != ''
         run: ${{ inputs.bundle-check-command }}
