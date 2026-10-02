@@ -101,3 +101,11 @@ the job level here and at the caller's `uses:` job.
 - `NPM_CONFIG_LEGACY_PEER_DEPS=true` is set on the Cloudflare job so that
   `wrangler-action`'s implicit `npm i wrangler` respects the workspace's
   peer-dep workaround.
+
+## Arcade R2 releases
+
+`deploy-arcade-component.yml` builds one allowlisted game, preserves its existing source/browser/PWA gates, and publishes a complete immutable R2 version. Every runtime file is hashed and checked over the CDN with CORS/cache/MIME checks; a Chromium module/CSP readiness check must pass before switching only that game's no-store channel. Failed verification never changes the live channel. The current main SHA, repository/game ownership and previous channel are checked again before promotion. GitHub Pages remains opt-in; no Cloudflare Pages publication remains in this workflow.
+
+Callers pin both workflow and `support-sha` to the same full commit and supply `game-id`, `prebuild-command`, `postbuild-command`, plus existing optional budgets. The original Cloudflare project is retired separately after the lobby uses R2. R2 uses the existing organisation CI token and dedicated `mini-arcade-assets` bucket. Never run production mutations locally.
+
+The private workspace also consumes the same release implementation as the commit-pinned `@quiet-build/arcade-release` package. The package has no runtime dependencies: it resolves the caller's existing Playwright installation only during browser verification. `scripts/arcade-games.mjs` binds each game to exactly one repository and output directory. Run `node --test scripts/release-arcade.test.mjs`, the caller YAML contract check, and `node scripts/install-rclone.mjs` after changing the publisher/tool installer.

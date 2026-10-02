@@ -1,0 +1,17 @@
+{
+  "name": "@quiet-build/arcade-release",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./scripts/release-arcade.mjs",
+    "./install-rclone": "./scripts/install-rclone.mjs",
+    "./games": "./scripts/arcade-games.mjs"
+  },
+  "files": [
+    "scripts/release-arcade.mjs",
+    "scripts/install-rclone.mjs",
+    "scripts/arcade-r2.mjs",
+    "scripts/arcade-games.mjs"
+  ]
+}
